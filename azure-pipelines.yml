@@ -1,0 +1,45 @@
+
+trigger:
+  branches:
+    include:    
+    - master   
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+- group: Pipelines variables  
+- name: 'patch'
+  value: $[counter(variables['Minor'], 0)] #this will reset when we bump minor  
+- name: 'NugetVersion'
+  value : $(Major).$(Minor).$(patch)
+
+
+name: $(Major).$(Minor).$(patch)
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: 'Installing nuget tool'
+
+- task: NuGetCommand@2
+  displayName: 'Restoring nugets'
+  inputs:
+    restoreSolution: '**/*.sln'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Packing library'
+  condition: succeeded()
+  inputs:
+    command: 'pack'
+    packagesToPack: '**/Azure.Pipelines.Package.csproj'
+    versioningScheme: 'byEnvVar'
+    versionEnvVar: 'NugetVersion'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Pushing packages'
+  condition: and( succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: 'feed-id'

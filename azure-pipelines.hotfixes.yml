@@ -1,0 +1,39 @@
+trigger:
+  branches:
+    include:    
+    - hotfix/*
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+- group: Pipelines variables
+
+name: $(Major).$(Minor)-hotfix
+
+steps:
+
+- checkout: self
+  persistCredentials: true
+
+- task: CmdLine@2
+  displayName: 'Merge to master'
+  inputs:
+    script: |                          
+      git checkout master
+      git merge $(Build.SourceBranchName) -m "merge to master"
+      git status      
+      git push       
+      git status
+    failOnStderr: false
+
+- task: CmdLine@2
+  displayName: 'Merge to devel'
+  inputs:
+    script: |                 
+      git checkout devel
+      git merge $(Build.SourceBranchName) -m "merge to devel"
+      git status
+      git push 
+      git status
+    failOnStderr: false

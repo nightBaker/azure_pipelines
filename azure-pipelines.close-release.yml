@@ -1,0 +1,38 @@
+trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+- group: Pipelines variables
+
+name: $(Major).$(Minor)-close
+
+steps:
+
+- checkout: self
+  persistCredentials: true
+
+- task: CmdLine@2
+  displayName: 'Merge to master'
+  inputs:
+    script: |                          
+      git checkout master
+      git merge origin/release/$(Major).$(Minor) -m "merge to master"
+      git status
+      git tag v$(Major).$(Minor)
+      git push 
+      git push --tag
+      git status
+    failOnStderr: false
+
+- task: CmdLine@2
+  displayName: 'Merge to devel'
+  inputs:
+    script: |                 
+      git checkout devel
+      git merge origin/release/$(Major).$(Minor) -m "merge to devel"
+      git status
+      git push 
+      git status
+    failOnStderr: false
